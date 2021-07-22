@@ -1,0 +1,4 @@
+#The format of this file is as below. An example entry is provided.
+#Commented lines are ignored in the processing.
+#{Field Name}: {type generated from MS-Access export}: {MySQL Type it should be}
+#Date_Claim_Adj: Text (100): Date
