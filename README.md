@@ -21,8 +21,10 @@ them.
 ### field_types.remap
 This file is used to remap the expected type of a field. For example,
 Text (100) might be used instead of Date, but by looking at all the
-data, it is obvious it is a Date.  
-> {field name}: {data type}: {new data type}  
+data, it is obvious it is a Date.
+
+> {field name}: {data type}: {new data type}
+
 The spaces after the colons are important. Without them a field like "Adjust_Text" might
 turn into "Adjust_VARCHAR".
 
