@@ -22,8 +22,8 @@
 echoerr() { echo "$@" 1>&2; }
 
 fix_files_exist_check() {
-    files=$(find fix_*.sql 2> /dev/null | wc -l)
-    if [[ "$files" != "0" ]]; then
+    FILES=$(find ./fix_*.sql 2> /dev/null | wc -l)
+    if [[ "${FILES}" != "0" ]]; then
         return 1; # Exists
     else
         return 0;
@@ -31,8 +31,8 @@ fix_files_exist_check() {
 }
 
 gz_files_exist_check() {
-    files=$(find *.gz 2> /dev/null | wc -l)
-    if [[ "$files" != "0" ]]; then
+    FILES=$(find ./*.gz 2> /dev/null | wc -l)
+    if [[ "${FILES}" != "0" ]]; then
         return 1; # Exists
     else
         return 0;
@@ -70,10 +70,10 @@ touch split_placeholder.sql.gz
 rm split_*.sql split_*.sql.gz
 
 echo "Installing default libraries..."
-apt-get update -q 2>&1 > /dev/null
+apt-get update -q > /dev/null 2>&1
 RESULT=$?
 if [[ "${RESULT}" == "0" ]]; then
-    apt-get install -q -y sudo 2>&1 > /dev/null
+    apt-get install -q -y sudo > /dev/null 2>&1
     echo Succeeded installing sudo.
     MYSQL_OPTIONS="-u ${MYSQL_USER} -p${MYSQL_PASSWORD}"
     MYSQL_ROOT_OPTIONS="-u root -p${MYSQL_ROOT_PASSWORD}"
@@ -84,15 +84,15 @@ else
     MYSQL_ROOT_OPTIONS=""
 fi
 echo Installing Modern::Perl perl library...
-sudo apt-get install -q -y libmodern-perl-perl 2>&1 > /dev/null
+sudo apt-get install -q -y libmodern-perl-perl > /dev/null 2>&1
 echo Installing File::Slurp perl library...
-sudo apt-get install -q -y libfile-slurp-perl 2>&1 > /dev/null
+sudo apt-get install -q -y libfile-slurp-perl > /dev/null 2>&1
 echo Installing Text::Trim perl library...
-sudo apt-get install -q -y libtext-trim-perl 2>&1 > /dev/null
+sudo apt-get install -q -y libtext-trim-perl > /dev/null 2>&1
 echo Installing Data::Dumper perl library...
-sudo apt-get install -q -y libdata-dump-perl 2>&1 > /dev/null
+sudo apt-get install -q -y libdata-dump-perl > /dev/null 2>&1
 echo Installing mdb tools...
-sudo apt-get install -q -y mdbtools 2>&1 > /dev/null
+sudo apt-get install -q -y mdbtools > /dev/null 2>&1
 
 echo "Creating the database..."
 echo "DROP DATABASE IF EXISTS \`${OUTPUT_DB}\`;" > "${OUTPUT1_SQL}"
@@ -123,14 +123,14 @@ FIELD_NAMES=()
 FIELD_TYPES=()
 FIELD_NEW_TYPES=()
 if [[ -f field_type.remap ]]; then
-    OLD_IFS=$IFS
+    OLD_IFS=${IFS}
     while IFS=':' read -r -a array; do
         FIELD_NAMES+=("${array[0]}")
         FIELD_TYPES+=("${array[1]}")
         FIELD_NEW_TYPES+=("${array[2]}")
     done < <(grep -v "^#" field_type.remap)
-    IFS=$OLD_IFS
-    FIELD_COUNT=$(grep -v "^#" field_type.remap | wc -l)
+    IFS=${OLD_IFS}
+    FIELD_COUNT=$(grep -c -v "^#" field_type.remap)
 else
     FIELD_COUNT=0
 fi
@@ -220,7 +220,7 @@ done
 
 gz_files_exist_check
 GZ_FILES_EXIST=$?
-if [[ $GZ_FILES_EXIST -eq 1 ]]; then
+if [[ ${GZ_FILES_EXIST} -eq 1 ]]; then
     sudo chown 1000.1000 ./*.gz
 fi
 
@@ -229,11 +229,11 @@ echo "Generating TAR file to send..."
 fix_files_exist_check
 FIX_FILES_EXIST=$?
 tar -cf SQL-files.tar "${OUTPUT1_SQL}" "${OUTPUT2_SQL}" split_*.sql
-if [[ $FIX_FILES_EXIST -eq 1 ]]; then
-    tar -rf SQL-files.tar fix_*.sql
-fi
-if [[ $GZ_FILES_EXIST -eq 1 ]]; then
+if [[ ${GZ_FILES_EXIST} -eq 1 ]]; then
     tar -rf SQL-files.tar split_*.gz
+fi
+if [[ ${FIX_FILES_EXIST} -eq 1 ]]; then
+    tar -rf SQL-files.tar fix_*.sql
 fi
 sudo chown 1000.1000 SQL-files.tar
 
@@ -244,39 +244,39 @@ while [[ "${ANSWER}" != "Y" && "${ANSWER}" != "y" &&
 done
 if [[ "${ANSWER}" == "N" || "${ANSWER}" == "n" ]]; then
     # Don't need generating SQL files hanging around
-    rm -f "$OUTPUT1_SQL" "$OUTPUT2_SQL" split_*.sql split_*.gz
+    rm -f "${OUTPUT1_SQL}" "${OUTPUT2_SQL}" split_*.sql split_*.gz
     exit 0;
 fi
 
 echo "Now actually import everything into MySQL (many, many minutes!)..."
 # pv is useful for seeing progress, since this is a long process
-sudo apt-get install -q -y pv 2>&1 > /dev/null
+sudo apt-get install -q -y pv > /dev/null 2>&1
 
 echo Creating an empty DB called "${OUTPUT_DB}"...
-pv "$OUTPUT1_SQL" | sudo mysql $MYSQL_ROOT_OPTIONS
+pv "${OUTPUT1_SQL}" | sudo mysql ${MYSQL_ROOT_OPTIONS}
 
 echo Creating an empty tables in "${OUTPUT_DB}"...
-pv "$OUTPUT2_SQL" | sudo mysql $MYSQL_OPTIONS
+pv "${OUTPUT2_SQL}" | sudo mysql ${MYSQL_OPTIONS}
 
 for SQL_DATA_FILE in split_*.sql; do
     echo "${SQL_DATA_FILE}" data is being imported...
-    pv "${SQL_DATA_FILE}" | sudo mysql $MYSQL_OPTIONS
+    pv "${SQL_DATA_FILE}" | sudo mysql ${MYSQL_OPTIONS}
 done
 
-if [[ $GZ_FILES_EXISTS -eq 1 ]]; then
+if [[ ${GZ_FILES_EXIST} -eq 1 ]]; then
     for SQL_DATA_FILE in split_*.sql.gz; do
         echo "${SQL_DATA_FILE}" data is being imported...
-        zcat "${SQL_DATA_FILE}" | pv | sudo mysql $MYSQL_OPTIONS
+        zcat "${SQL_DATA_FILE}" | pv | sudo mysql ${MYSQL_OPTIONS}
     done
 fi
 
 echo "Running MySQL Cleaning up scripts..."
-if [[ $FIX_FILES_EXIST -eq 1 ]]; then
+if [[ ${FIX_FILES_EXIST} -eq 1 ]]; then
     for SQL_SCRIPT in fix_*sql; do
         DATABASE_NAME=$(grep "USE .*;" "${SQL_SCRIPT}" | cut -f2 -d" " | cut -f1 -d";")
         if [[ "${DATABASE_NAME}" == "${OUTPUT_DB}" ]]; then
             echo Running "${SQL_SCRIPT}"
-            pv "${SQL_SCRIPT}" | sudo mysql $MYSQL_OPTIONS
+            pv "${SQL_SCRIPT}" | sudo mysql ${MYSQL_OPTIONS}
         else
             echo Uses "${DATABASE_NAME}", but generated "${OUTPUT_DB}". Skipping "${SQL_SCRIPT}"...
         fi
@@ -284,4 +284,4 @@ if [[ $FIX_FILES_EXIST -eq 1 ]]; then
 fi
 
 # Don't need generating SQL files hanging around, because tar file exists.
-rm -f "${OUTPUT1_SQL}" "${OUTPUT2_SQL}" split_*.sql split_*.gz 2>&1 > /dev/null
+rm -f "${OUTPUT1_SQL}" "${OUTPUT2_SQL}" split_*.sql split_*.gz > /dev/null 2>&1
