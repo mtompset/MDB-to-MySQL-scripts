@@ -6,7 +6,7 @@ This set of scripts needs an Access MDB file.
 This set of scripts needs docker-compose and docker installed.
 
 ## General Use
-docker-compose up -d
+docker-compose up -d  
 docker-compose exec db bash -c "cd /data; ./mysql_export.sh {access database name} {MySQL DB name}"
 
 ## Generated File: SQL-files.tar
